@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	go.uber.org/zap v1.28.0
 	gopkg.in/go-playground/validator.v9 v9.31.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

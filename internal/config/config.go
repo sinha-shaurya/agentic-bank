@@ -2,43 +2,54 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"strconv"
-	"strings"
-	"time"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
-// Config is the fully resolved runtime configuration. It is built once at
-// startup from the environment and injected downwards — nothing reads os.Getenv
-// after Load returns, and nothing reads a file relative to the working
-// directory (which is not stable inside a container or on Render).
-type Config struct {
-	Env             string
-	Port            string
-	DatabaseURL     string
-	LogLevel        string
-	GenesisToken    string
-	ShutdownTimeout time.Duration
+// configFile is read from the process working directory at startup.
+const configFile = "config.yaml"
+
+// AppConfig is the top-level shape of config.yaml.
+type AppConfig struct {
+	AppConfigObject Config `yaml:"app"`
 }
 
-// Load reads configuration from the environment and fails fast on anything
-// missing or malformed, so a misconfigured instance never starts and gets
-// traffic routed to it.
-func Load() (Config, error) {
-	cfg := Config{
-		Env:          getEnv("APP_ENV", "development"),
-		Port:         getEnv("PORT", "8080"),
-		DatabaseURL:  os.Getenv("DATABASE_URL"),
-		LogLevel:     strings.ToLower(getEnv("LOG_LEVEL", "info")),
-		GenesisToken: os.Getenv("GENESIS_TOKEN"),
-	}
+// Config is the fully resolved runtime configuration. It is built once at
+// startup and injected downwards — nothing re-reads the file after Load
+// returns.
+type Config struct {
+	Env          string `yaml:"env"`
+	Port         int    `yaml:"port"`
+	DatabaseURL  string `yaml:"database_url"`
+	LogLevel     string `yaml:"log_level"`
+	GenesisToken string `yaml:"genesis_token"`
+}
 
-	shutdownTimeout, err := getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second)
+func getConfigFilePath() string {
+	cwd, err := os.Getwd()
 	if err != nil {
-		return Config{}, err
+		log.Fatal("Error getting current working directory:", err)
 	}
-	cfg.ShutdownTimeout = shutdownTimeout
+	return filepath.Join(cwd, configFile)
+}
 
+// Load reads config.yaml and fails fast on anything missing or malformed, so a
+// misconfigured instance never starts and gets traffic routed to it.
+func Load() (Config, error) {
+	data, err := os.ReadFile(getConfigFilePath())
+	if err != nil {
+		return Config{}, fmt.Errorf("config: read %s: %w", configFile, err)
+	}
+
+	var file AppConfig
+	if err := yaml.Unmarshal(data, &file); err != nil {
+		return Config{}, fmt.Errorf("config: parse %s: %w", configFile, err)
+	}
+
+	cfg := file.AppConfigObject
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
 	}
@@ -48,18 +59,17 @@ func Load() (Config, error) {
 
 func (cfg Config) validate() error {
 	if cfg.DatabaseURL == "" {
-		return fmt.Errorf("config: DATABASE_URL is required")
+		return fmt.Errorf("config: app.database_url is required")
 	}
 
-	port, err := strconv.Atoi(cfg.Port)
-	if err != nil || port < 1 || port > 65535 {
-		return fmt.Errorf("config: PORT must be a valid port number, got %q", cfg.Port)
+	if cfg.Port < 1 || cfg.Port > 65535 {
+		return fmt.Errorf("config: app.port must be a valid port number, got %d", cfg.Port)
 	}
 
 	switch cfg.LogLevel {
 	case "debug", "info", "warn", "error":
 	default:
-		return fmt.Errorf("config: LOG_LEVEL must be one of debug|info|warn|error, got %q", cfg.LogLevel)
+		return fmt.Errorf("config: app.log_level must be one of debug|info|warn|error, got %q", cfg.LogLevel)
 	}
 
 	return nil
@@ -69,30 +79,9 @@ func (cfg Config) validate() error {
 // localhost: a container-local listener is unreachable from outside the
 // container.
 func (cfg Config) Address() string {
-	return "0.0.0.0:" + cfg.Port
+	return fmt.Sprintf("0.0.0.0:%d", cfg.Port)
 }
 
 func (cfg Config) IsProduction() bool {
 	return cfg.Env == "production"
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok && value != "" {
-		return value
-	}
-	return fallback
-}
-
-func getEnvDuration(key string, fallback time.Duration) (time.Duration, error) {
-	value, ok := os.LookupEnv(key)
-	if !ok || value == "" {
-		return fallback, nil
-	}
-
-	duration, err := time.ParseDuration(value)
-	if err != nil {
-		return 0, fmt.Errorf("config: %s must be a valid duration, got %q", key, value)
-	}
-
-	return duration, nil
 }
