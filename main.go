@@ -43,8 +43,7 @@ func run() error {
 		zap.String("address", cfg.Address()),
 		zap.String("log_level", cfg.LogLevel))
 
-	// Address is 0.0.0.0:$PORT, not localhost: a container-local listener is
-	// unreachable from outside the container.
+	
 	return router.Run(cfg.Address())
 }
 
