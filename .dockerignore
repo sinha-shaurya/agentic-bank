@@ -1,0 +1,13 @@
+.git
+.gitignore
+.claude
+docs/
+bin/
+tmp/
+*.md
+!README.md
+.env
+.env.*
+Dockerfile
+docker-compose.yml
+.github/
