@@ -1,0 +1,30 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - cyclop
+    - bodyclose
+    - noctx
+    - errorlint
+    - gosec
+    - unconvert
+  exclusions:
+    rules:
+      # Test files trip these on patterns that are fine in tests: unchecked
+      # assertion errors, request helpers without a context, hardcoded creds
+      # in fixtures.
+      - path: _test\.go
+        linters:
+          - gosec
+          - noctx
+          - bodyclose
+          - errcheck
+issues:
+  # Defaults are 50 and 3, which silently dropped 3 revive findings from this
+  # repo's output. A commit gate must report everything it finds.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofumpt
+    - goimports

@@ -1,0 +1,30 @@
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.13.2
+    hooks:
+      # Upstream entry is `golangci-lint run --new-from-rev HEAD --fix`; the
+      # args below are appended.
+      #   --new-from-rev=HEAD  scope to the staged change (not the whole module)
+      #   --whole-files        report every issue in a touched file, not only
+      #                        issues sitting on the exact added lines. Without
+      #                        it, findings anchored to unmodified declaration
+      #                        lines (revive's "exported ... should have
+      #                        comment") are silently dropped.
+      - id: golangci-lint
+        args:
+          - --new-from-rev=HEAD
+          - --whole-files
+      # Scoped by the hook's own `files:` pattern to .golangci.{yaml,yml,toml,json}.
+      - id: golangci-lint-config-verify

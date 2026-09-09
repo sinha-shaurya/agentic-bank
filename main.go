@@ -43,7 +43,6 @@ func run() error {
 		zap.String("address", cfg.Address()),
 		zap.String("log_level", cfg.LogLevel))
 
-	
 	return router.Run(cfg.Address())
 }
 

@@ -91,13 +91,13 @@ func TestSetApiErrorWritesFailureEnvelope(t *testing.T) {
 		t.Errorf("message = %q", got.Message)
 	}
 
-	// GetErrorResponse is what lands in data.
-	data, ok := got.Data.(map[string]any)
-	if !ok {
-		t.Fatalf("data = %#v, want an object", got.Data)
+	// An error carries no payload: the cause is in message, the machine-readable
+	// discriminator in error_code, and data is omitted from the wire entirely.
+	if got.Data != nil {
+		t.Errorf("data = %#v, want nil on a failure", got.Data)
 	}
-	if data["message"] != "amount_paise must be a positive integer" {
-		t.Errorf("data.message = %v", data["message"])
+	if strings.Contains(recorder.Body.String(), "\"data\"") {
+		t.Errorf("failure body carries data: %s", recorder.Body.String())
 	}
 }
 
