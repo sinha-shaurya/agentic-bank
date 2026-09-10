@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -33,7 +32,7 @@ func run() error {
 	}
 	defer func() { _ = logger.Sync() }()
 
-	db, err := database.New(context.Background(), cfg, logger)
+	db, err := database.New(cfg, logger)
 	if err != nil {
 		return err
 	}

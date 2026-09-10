@@ -30,9 +30,8 @@ type DB struct {
 	gorm *gorm.DB
 }
 
-// New opens the pool and verifies it is reachable before returning. ctx bounds
-// that check.
-func New(ctx context.Context, appConfig config.Config, logger *zap.Logger) (*DB, error) {
+// New opens the pool and applies its connection properties.
+func New(appConfig config.Config, logger *zap.Logger) (*DB, error) {
 	gormDB, err := openConnection(appConfig)
 	if err != nil {
 		return nil, err
@@ -47,10 +46,6 @@ func New(ctx context.Context, appConfig config.Config, logger *zap.Logger) (*DB,
 	postgresDB.SetMaxIdleConns(maxIdleConns)
 	postgresDB.SetMaxOpenConns(maxOpenConns)
 	postgresDB.SetConnMaxLifetime(connMaxLifetime)
-
-	if err := postgresDB.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("database: ping %s/%s: %w", appConfig.Postgres.Host, appConfig.Postgres.DBName, err)
-	}
 
 	logger.Info("db context loaded successfully",
 		zap.String("host", appConfig.Postgres.Host),
