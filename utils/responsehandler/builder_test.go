@@ -177,3 +177,50 @@ func TestSetHttpStatusOverridesSuccessStatus(t *testing.T) {
 		t.Errorf("message = %q", got.Message)
 	}
 }
+
+// Setters compose in any order: an explicit message survives a later setter.
+func TestSetMessageWinsRegardlessOfOrder(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		build func(*Builder)
+	}{
+		{"message first", func(b *Builder) { b.SetMessage("wallet created").SetResponse(gin.H{"wallet_id": "w_1"}) }},
+		{"message last", func(b *Builder) { b.SetResponse(gin.H{"wallet_id": "w_1"}).SetMessage("wallet created") }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, recorder := newTestContext()
+
+			builder := New(ctx)
+			tc.build(builder)
+			builder.Build()
+
+			var got Response
+			if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+				t.Fatalf("unmarshal body: %v", err)
+			}
+			if got.Message != "wallet created" {
+				t.Errorf("message = %q, want %q", got.Message, "wallet created")
+			}
+			if got.Status != StatusSuccess || got.Data == nil {
+				t.Errorf("envelope = %+v", got)
+			}
+		})
+	}
+}
+
+// A failure must not carry a payload from an earlier success branch.
+func TestSetApiErrorClearsPriorData(t *testing.T) {
+	ctx, recorder := newTestContext()
+
+	New(ctx).
+		SetResponse(gin.H{"wallet_id": "w_1"}).
+		SetApiError(apierrors.New(http.StatusConflict, apierrors.ErrValidation, errors.New("idempotency key reused"))).
+		Build()
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("http status = %d, want 409", recorder.Code)
+	}
+	if strings.Contains(recorder.Body.String(), "wallet_id") {
+		t.Errorf("failure body carries stale data: %s", recorder.Body.String())
+	}
+}
