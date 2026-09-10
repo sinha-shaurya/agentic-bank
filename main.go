@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/sinha-shaurya/agentic-bank/internal/config"
+	"github.com/sinha-shaurya/agentic-bank/internal/database"
 	"github.com/sinha-shaurya/agentic-bank/internal/obs"
 )
 
@@ -30,6 +32,12 @@ func run() error {
 		return err
 	}
 	defer func() { _ = logger.Sync() }()
+
+	db, err := database.New(context.Background(), cfg, logger)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = db.Close() }()
 
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)

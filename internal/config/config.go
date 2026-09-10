@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -11,6 +12,9 @@ import (
 
 // configFile is read from the process working directory at startup.
 const configFile = "config.yaml"
+
+// defaultSSLMode is what an unset postgres.sslmode falls back to.
+const defaultSSLMode = "disable"
 
 // AppConfig is the top-level shape of config.yaml.
 type AppConfig struct {
@@ -21,11 +25,22 @@ type AppConfig struct {
 // startup and injected downwards — nothing re-reads the file after Load
 // returns.
 type Config struct {
-	Env          string `yaml:"env"`
-	Port         int    `yaml:"port"`
-	DatabaseURL  string `yaml:"database_url"`
-	LogLevel     string `yaml:"log_level"`
-	GenesisToken string `yaml:"genesis_token"`
+	Env          string   `yaml:"env"`
+	Port         int      `yaml:"port"`
+	Postgres     Postgres `yaml:"postgres"`
+	LogLevel     string   `yaml:"log_level"`
+	GenesisToken string   `yaml:"genesis_token"`
+}
+
+// Postgres describes the database connection. Host carries the port too, e.g.
+// "localhost:5432".
+type Postgres struct {
+	Host     string `yaml:"host"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	Debug    bool   `yaml:"debug"`
+	SSLMode  string `yaml:"sslmode"`
 }
 
 func getConfigFilePath() string {
@@ -50,6 +65,10 @@ func Load() (Config, error) {
 	}
 
 	cfg := file.AppConfigObject
+	if cfg.Postgres.SSLMode == "" {
+		cfg.Postgres.SSLMode = defaultSSLMode
+	}
+
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
 	}
@@ -58,8 +77,8 @@ func Load() (Config, error) {
 }
 
 func (cfg Config) validate() error {
-	if cfg.DatabaseURL == "" {
-		return fmt.Errorf("config: app.database_url is required")
+	if err := cfg.Postgres.validate(); err != nil {
+		return err
 	}
 
 	if cfg.Port < 1 || cfg.Port > 65535 {
@@ -70,6 +89,34 @@ func (cfg Config) validate() error {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("config: app.log_level must be one of debug|info|warn|error, got %q", cfg.LogLevel)
+	}
+
+	return nil
+}
+
+func (pg Postgres) validate() error {
+	if pg.Host == "" {
+		return fmt.Errorf("config: app.postgres.host is required")
+	}
+
+	// Host must be addressable as-is by the driver, so reject a missing port here
+	// rather than at first connect.
+	if _, _, err := net.SplitHostPort(pg.Host); err != nil {
+		return fmt.Errorf("config: app.postgres.host must be host:port, got %q", pg.Host)
+	}
+
+	if pg.Username == "" {
+		return fmt.Errorf("config: app.postgres.username is required")
+	}
+
+	if pg.DBName == "" {
+		return fmt.Errorf("config: app.postgres.dbname is required")
+	}
+
+	switch pg.SSLMode {
+	case "disable", "allow", "prefer", "require", "verify-ca", "verify-full":
+	default:
+		return fmt.Errorf("config: app.postgres.sslmode is invalid, got %q", pg.SSLMode)
 	}
 
 	return nil

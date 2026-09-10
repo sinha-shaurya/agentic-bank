@@ -3,9 +3,15 @@ app:
   port: 8080
   log_level: info
 
-  # Postgres. Locally this points at the compose service; on Render it is the
-  # Neon pooled connection string (…-pooler…, sslmode=require).
-  database_url: postgres://postgres:postgres@localhost:5432/bank?sslmode=disable
+  # Locally this points at the compose service; on Render it is the Neon pooled
+  # host (…-pooler…) with sslmode: require.
+  postgres:
+    host: localhost:5432
+    username: postgres
+    password: postgres
+    dbname: bank
+    debug: true
+    sslmode: disable
 
   # Guards POST /admin/fund. Generate a random value per environment.
   genesis_token: change-me
