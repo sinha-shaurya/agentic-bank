@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/sinha-shaurya/agentic-bank/utils/errors"
+	"github.com/sinha-shaurya/agentic-bank/utils/httperr"
 )
 
 // Builder accumulates one response for one request. Setters mutate individual
@@ -49,7 +49,7 @@ func (builder *Builder) SetResponse(data any) *Builder {
 
 // SetApiError marks the response a failure, taking the status and wire error
 // code from the HttpError and clearing any payload set earlier.
-func (builder *Builder) SetApiError(httpError errors.HttpError) *Builder {
+func (builder *Builder) SetApiError(httpError httperr.HttpError) *Builder {
 	builder.httpStatus = httpError.GetStatusCode()
 	builder.response.Status = StatusFailure
 	builder.response.Data = nil

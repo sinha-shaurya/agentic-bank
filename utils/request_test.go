@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	apierrors "github.com/sinha-shaurya/agentic-bank/utils/errors"
+	"github.com/sinha-shaurya/agentic-bank/utils/httperr"
 )
 
 func TestMain(m *testing.M) {
@@ -40,15 +40,15 @@ func assertBadRequest(t *testing.T, err error) string {
 		t.Fatal("err = nil, want a validation error")
 	}
 
-	var httpErr apierrors.HttpError
+	var httpErr httperr.HttpError
 	if !errors.As(err, &httpErr) {
-		t.Fatalf("err = %#v, want an apierrors.HttpError", err)
+		t.Fatalf("err = %#v, want an httperr.HttpError", err)
 	}
 	if httpErr.GetStatusCode() != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400", httpErr.GetStatusCode())
 	}
-	if httpErr.GetErrorCode() != apierrors.ErrValidation {
-		t.Errorf("code = %q, want %q", httpErr.GetErrorCode(), apierrors.ErrValidation)
+	if httpErr.GetErrorCode() != httperr.ErrValidation {
+		t.Errorf("code = %q, want %q", httpErr.GetErrorCode(), httperr.ErrValidation)
 	}
 	return httpErr.GetErrorMessage()
 }

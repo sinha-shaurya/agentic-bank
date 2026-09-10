@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
-	apierrors "github.com/sinha-shaurya/agentic-bank/utils/errors"
+	"github.com/sinha-shaurya/agentic-bank/utils/httperr"
 )
 
 // validate is built once: the instance caches struct metadata by type, which a
@@ -30,7 +30,7 @@ func newValidator() *validator.Validate {
 }
 
 // BindAndValidate fills obj from the URI params, query string and JSON body,
-// then runs its `validate` tags. Every failure returns an apierrors.HttpError
+// then runs its `validate` tags. Every failure returns an httperr.HttpError
 // carrying 400 — recover it with errors.As.
 func BindAndValidate(ctx *gin.Context, obj any) error {
 	if err := ctx.ShouldBindUri(obj); err != nil {
@@ -63,7 +63,7 @@ func BindAndValidate(ctx *gin.Context, obj any) error {
 }
 
 func badRequest(err error) error {
-	return apierrors.New(http.StatusBadRequest, apierrors.ErrValidation, err)
+	return httperr.NewCode(httperr.ErrValidation, err)
 }
 
 // hasRequestBody gates JSON binding on the request, not on the DTO. Keying off

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	apierrors "github.com/sinha-shaurya/agentic-bank/utils/errors"
+	"github.com/sinha-shaurya/agentic-bank/utils/httperr"
 )
 
 func TestMain(m *testing.M) {
@@ -66,9 +66,9 @@ func TestSetResponseWritesSuccessEnvelope(t *testing.T) {
 func TestSetApiErrorWritesFailureEnvelope(t *testing.T) {
 	ctx, recorder := newTestContext()
 
-	httpError := apierrors.New(
+	httpError := httperr.New(
 		http.StatusBadRequest,
-		apierrors.ErrValidation,
+		httperr.ErrValidation,
 		errors.New("amount_paise must be a positive integer"),
 	)
 	New(ctx).SetApiError(httpError).Build()
@@ -84,8 +84,8 @@ func TestSetApiErrorWritesFailureEnvelope(t *testing.T) {
 	if got.Status != StatusFailure {
 		t.Errorf("status = %d, want %d", got.Status, StatusFailure)
 	}
-	if got.ErrorCode != apierrors.ErrValidation {
-		t.Errorf("error_code = %q, want %q", got.ErrorCode, apierrors.ErrValidation)
+	if got.ErrorCode != httperr.ErrValidation {
+		t.Errorf("error_code = %q, want %q", got.ErrorCode, httperr.ErrValidation)
 	}
 	if got.Message != "amount_paise must be a positive integer" {
 		t.Errorf("message = %q", got.Message)
@@ -106,9 +106,9 @@ func TestSetApiErrorWritesFailureEnvelope(t *testing.T) {
 func TestFailureStatusSurvivesSerialization(t *testing.T) {
 	ctx, recorder := newTestContext()
 
-	New(ctx).SetApiError(apierrors.New(
+	New(ctx).SetApiError(httperr.New(
 		http.StatusInternalServerError,
-		apierrors.ErrInternalServer,
+		httperr.ErrInternalServer,
 		errors.New("unexpected failure"),
 	)).Build()
 
@@ -118,13 +118,13 @@ func TestFailureStatusSurvivesSerialization(t *testing.T) {
 }
 
 func TestHttpErrorZeroValuesFallBack(t *testing.T) {
-	var zero apierrors.HttpError
+	var zero httperr.HttpError
 
 	if got := zero.GetStatusCode(); got != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", got)
 	}
-	if got := zero.GetErrorCode(); got != apierrors.ErrInternalServer {
-		t.Errorf("code = %q, want %q", got, apierrors.ErrInternalServer)
+	if got := zero.GetErrorCode(); got != httperr.ErrInternalServer {
+		t.Errorf("code = %q, want %q", got, httperr.ErrInternalServer)
 	}
 	// A nil cause must not panic.
 	if got := zero.GetErrorMessage(); got != http.StatusText(http.StatusInternalServerError) {
@@ -136,7 +136,7 @@ func TestSetResponseClearsPriorError(t *testing.T) {
 	ctx, recorder := newTestContext()
 
 	New(ctx).
-		SetApiError(apierrors.New(http.StatusBadRequest, apierrors.ErrValidation, errors.New("boom"))).
+		SetApiError(httperr.New(http.StatusBadRequest, httperr.ErrValidation, errors.New("boom"))).
 		SetResponse(gin.H{"wallet_id": "w_1"}).
 		Build()
 
@@ -214,7 +214,7 @@ func TestSetApiErrorClearsPriorData(t *testing.T) {
 
 	New(ctx).
 		SetResponse(gin.H{"wallet_id": "w_1"}).
-		SetApiError(apierrors.New(http.StatusConflict, apierrors.ErrValidation, errors.New("idempotency key reused"))).
+		SetApiError(httperr.New(http.StatusConflict, httperr.ErrValidation, errors.New("idempotency key reused"))).
 		Build()
 
 	if recorder.Code != http.StatusConflict {
