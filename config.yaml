@@ -5,7 +5,7 @@ app:
 
   # Postgres. Locally this points at the compose service; on Render it is the
   # Neon pooled connection string (…-pooler…, sslmode=require).
-  database_url: postgres://bank:bank@localhost:5432/bank?sslmode=disable
+  database_url: postgres://postgres:postgres@localhost:5432/bank?sslmode=disable
 
   # Guards POST /admin/fund. Generate a random value per environment.
   genesis_token: change-me
