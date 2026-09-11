@@ -16,6 +16,6 @@ const defaultSuccessMessage = "success"
 type Response struct {
 	Status    int               `json:"status"`
 	Message   string            `json:"message"`
-	Data      any               `json:"data,omitempty"`
-	ErrorCode httperr.ErrorCode `json:"error_code,omitempty"`
+	Data      any               `json:"data"`
+	ErrorCode httperr.ErrorCode `json:"error_code"`
 }
