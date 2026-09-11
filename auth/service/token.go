@@ -8,13 +8,13 @@ import (
 	"encoding/hex"
 )
 
-// tokenBytes is 256 bits of entropy, which is why a fast hash is safe here.
-const tokenBytes = 32
+// TOKEN_BYTES is 256 bits of entropy, which is why a fast hash is safe here.
+const TOKEN_BYTES = 32
 
-// Generate returns a new URL-safe bearer token. crypto/rand.Read never returns
+// GenerateToken returns a new URL-safe bearer token. crypto/rand.Read never returns
 // an error since Go 1.24; a broken entropy source crashes the process instead.
-func Generate() string {
-	buf := make([]byte, tokenBytes)
+func GenerateToken() string {
+	buf := make([]byte, TOKEN_BYTES)
 	_, _ = rand.Read(buf)
 	return base64.RawURLEncoding.EncodeToString(buf)
 }

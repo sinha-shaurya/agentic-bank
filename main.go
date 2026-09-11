@@ -11,6 +11,7 @@ import (
 	authRoutes "github.com/sinha-shaurya/agentic-bank/auth/routes"
 	"github.com/sinha-shaurya/agentic-bank/internal/config"
 	"github.com/sinha-shaurya/agentic-bank/internal/database"
+	"github.com/sinha-shaurya/agentic-bank/internal/middleware"
 	"github.com/sinha-shaurya/agentic-bank/internal/obs"
 )
 
@@ -32,6 +33,7 @@ func run() error {
 		return err
 	}
 	defer func() { _ = logger.Sync() }()
+	zap.ReplaceGlobals(logger)
 
 	if err := database.New(cfg, logger); err != nil {
 		return err
@@ -45,6 +47,9 @@ func run() error {
 	// perform auto migrate
 
 	router := gin.Default()
+	// lets *gin.Context passed as ctx see the request id and client cancellation
+	router.ContextWithFallback = true
+	router.Use(middleware.RequestID())
 	router.GET("/healthz", healthCheck)
 
 	logger.Info("starting api",

@@ -10,7 +10,7 @@ var urlSafe = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
 func TestGenerateIsURLSafeAndUnique(t *testing.T) {
 	seen := make(map[string]struct{})
 	for range 1000 {
-		bearerToken := Generate()
+		bearerToken := GenerateToken()
 		if !urlSafe.MatchString(bearerToken) {
 			t.Fatalf("token %q is not 43 url-safe characters", bearerToken)
 		}
