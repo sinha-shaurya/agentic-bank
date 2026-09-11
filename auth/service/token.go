@@ -1,5 +1,5 @@
 // Package token mints bearer tokens and derives the hash stored in their place.
-package token
+package service
 
 import (
 	"crypto/rand"
