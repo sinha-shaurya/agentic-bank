@@ -32,20 +32,22 @@ func RegisterUser(ctx context.Context, db *gorm.DB) (*dto.UserRegistrationRespon
 }
 
 func RetrieveUser(ctx context.Context, db *gorm.DB, bearerToken string) (*model.User, *httperr.HttpError) {
+	log := obs.Logger(ctx)
+
 	if len(bearerToken) == 0 {
-		apiErr := httperr.NewCode(httperr.ErrForbidden, errors.New("bearer token is not supplied"))
+		apiErr := httperr.NewCode(httperr.ErrUnauthorized, errors.New("bearer token is not supplied"))
 		return nil, &apiErr
 	}
 
 	user, err := repository.GetUserByToken(db, Hash(bearerToken))
 	if err != nil {
+		log.Error(err.Error())
 		apiErr := httperr.NewCode(httperr.ErrInternalServer, err)
 		return nil, &apiErr
 	}
 
 	if user == nil {
-		apiErr := httperr.NewCode(httperr.ErrNotFound, err)
-
+		apiErr := httperr.NewCode(httperr.ErrUnauthorized, err)
 		return nil, &apiErr
 	}
 	return user, nil

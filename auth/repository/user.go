@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/sinha-shaurya/agentic-bank/auth/model"
 	"gorm.io/gorm"
 )
@@ -14,6 +16,10 @@ func GetUserByToken(db *gorm.DB, tokenHash string) (*model.User, error) {
 	err := db.Scopes(withTokenString(tokenHash), withActive()).Find(&user).Error
 	if err != nil {
 		return nil, err
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
 	}
 
 	return &user, nil
