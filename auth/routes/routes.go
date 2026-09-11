@@ -10,4 +10,5 @@ func AuthRoutes(router *gin.RouterGroup) {
 
 	// add paths
 	router.POST("/register", controller.RegisterUser)
+	router.POST("/retrieve", controller.RetrieveUeser)
 }

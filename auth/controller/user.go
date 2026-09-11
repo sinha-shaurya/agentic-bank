@@ -5,8 +5,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/sinha-shaurya/agentic-bank/auth/dto"
 	"github.com/sinha-shaurya/agentic-bank/auth/service"
 	"github.com/sinha-shaurya/agentic-bank/internal/database"
+	"github.com/sinha-shaurya/agentic-bank/utils"
+	"github.com/sinha-shaurya/agentic-bank/utils/httperr"
 	"github.com/sinha-shaurya/agentic-bank/utils/responsehandler"
 )
 
@@ -23,4 +26,25 @@ func RegisterUser(ctx *gin.Context) {
 	}
 
 	responseBuilder.SetResponse(response).SetHttpStatus(http.StatusCreated).Build()
+}
+
+func RetrieveUeser(ctx *gin.Context) {
+	responseBuilder := responsehandler.New(ctx)
+	defer responseBuilder.Build()
+
+	var request dto.UserRetrieveRequest
+	validationErr := utils.BindAndValidate(ctx, &request)
+	if validationErr != nil {
+		apiErr := httperr.NewCode(httperr.ErrValidation, validationErr)
+		responseBuilder.SetApiError(apiErr)
+		return
+	}
+	db := database.GetDbContext(ctx)
+	response, apiErr := service.RetrieveUser(ctx, db, request.HashString)
+	if apiErr != nil {
+		responseBuilder.SetApiError(*apiErr)
+		return
+	}
+
+	responseBuilder.SetResponse(response)
 }
