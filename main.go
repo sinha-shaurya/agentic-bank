@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	authRoutes "github.com/sinha-shaurya/agentic-bank/auth/routes"
 	"github.com/sinha-shaurya/agentic-bank/internal/config"
 	"github.com/sinha-shaurya/agentic-bank/internal/database"
 	"github.com/sinha-shaurya/agentic-bank/internal/obs"
@@ -32,15 +33,16 @@ func run() error {
 	}
 	defer func() { _ = logger.Sync() }()
 
-	db, err := database.New(cfg, logger)
-	if err != nil {
+	if err := database.New(cfg, logger); err != nil {
 		return err
 	}
-	defer func() { _ = db.Close() }()
+	defer func() { _ = database.Close() }()
 
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	// perform auto migrate
 
 	router := gin.Default()
 	router.GET("/healthz", healthCheck)
@@ -50,9 +52,16 @@ func run() error {
 		zap.String("address", cfg.Address()),
 		zap.String("log_level", cfg.LogLevel))
 
+	// attach api group
+	apiGroup := router.Group("/api")
+	attachRoutes(apiGroup)
 	return router.Run(cfg.Address())
 }
 
 func healthCheck(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func attachRoutes(apiGroup *gin.RouterGroup) {
+	authRoutes.AuthRoutes(apiGroup)
 }

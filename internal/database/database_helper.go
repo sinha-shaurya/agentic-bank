@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,22 +25,31 @@ const (
 	slowThreshold   = time.Second
 )
 
-// DB owns the connection pool. It is built once at startup from injected
-// config and handed to every controller.
-type DB struct {
-	gorm *gorm.DB
+// pool is the single shared connection pool, set up once by New.
+var (
+	pool     *gorm.DB
+	initOnce sync.Once
+	initErr  error
+)
+
+// New initialises the shared pool. Repeat calls reuse it instead of opening another.
+func New(appConfig config.Config, logger *zap.Logger) error {
+	initOnce.Do(func() {
+		initErr = initPool(appConfig, logger)
+	})
+
+	return initErr
 }
 
-// New opens the pool and applies its connection properties.
-func New(appConfig config.Config, logger *zap.Logger) (*DB, error) {
+func initPool(appConfig config.Config, logger *zap.Logger) error {
 	gormDB, err := openConnection(appConfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	postgresDB, err := gormDB.DB()
 	if err != nil {
-		return nil, fmt.Errorf("database: get sql handle: %w", err)
+		return fmt.Errorf("database: get sql handle: %w", err)
 	}
 
 	// set connection properties
@@ -51,18 +61,26 @@ func New(appConfig config.Config, logger *zap.Logger) (*DB, error) {
 		zap.String("host", appConfig.Postgres.Host),
 		zap.String("dbname", appConfig.Postgres.DBName))
 
-	return &DB{gorm: gormDB}, nil
+	pool = gormDB
+	return nil
 }
 
-// GetDbContext returns a request-scoped handle. It is a session over the shared
-// pool, not a new connection, so controllers can call it per request.
-func (db *DB) GetDbContext(ctx context.Context) *gorm.DB {
-	return db.gorm.WithContext(ctx)
+// GetDbContext returns a request-scoped session over the shared pool, not a new connection.
+func GetDbContext(ctx context.Context) *gorm.DB {
+	if pool == nil {
+		panic("database: GetDbContext called before New")
+	}
+
+	return pool.WithContext(ctx)
 }
 
-// Close drains the pool on shutdown.
-func (db *DB) Close() error {
-	postgresDB, err := db.gorm.DB()
+// Close drains the shared pool on shutdown.
+func Close() error {
+	if pool == nil {
+		return nil
+	}
+
+	postgresDB, err := pool.DB()
 	if err != nil {
 		return fmt.Errorf("database: get sql handle: %w", err)
 	}
